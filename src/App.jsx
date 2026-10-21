@@ -1,5 +1,10 @@
+import { Routers } from "./utils/router";
 function App() {
-  return <>Hello World</>;
+  return (
+    <>
+      <Routers />
+    </>
+  );
 }
 
 export default App;
