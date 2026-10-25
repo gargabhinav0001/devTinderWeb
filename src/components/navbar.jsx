@@ -1,11 +1,17 @@
 import { useSelector } from "react-redux";
 import Logout from "./logout";
+import { Link } from "react-router-dom";
 
 export function NavBar() {
   const user = useSelector((store) => store.user);
-  console.log(" user in navbar : ", user);
+
   return (
     <div className="navbar bg-base-300 shadow-sm">
+      <div className="flex-1">
+        <a href="/" className="text-xl font-black tracking-tight">
+          mingle<span className="text-primary">.</span>
+        </a>
+      </div>
       <div className="flex-1">
         {user
           ? `Welcome ${user?.firstName}`
@@ -30,13 +36,10 @@ export function NavBar() {
             className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow"
           >
             <li>
-              <a className="justify-between">
-                Profile
-                <span className="badge">New</span>
-              </a>
+              <Link to="/profile">Profile</Link>
             </li>
             <li>
-              <a>Settings</a>
+              <Link to="/settings">Settings</Link>
             </li>
             <li>
               <Logout />

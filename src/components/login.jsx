@@ -21,7 +21,7 @@ export default function Login() {
       dispatch(addUser(res.data || null));
       navigate("/feed");
     } catch (err) {
-      console.log("error occured : ", err);
+      throw new Error(err, { cause: err });
     }
   };
 

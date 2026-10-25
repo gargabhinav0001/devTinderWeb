@@ -1,9 +1,9 @@
 import URLS from "../constants/urls";
 
+// TODO : error handling
 export async function login({ email, password }) {
   try {
     const payload = JSON.stringify({ email, password });
-    console.log("payload is : ", payload);
     const res = await fetch(`${URLS.BASE_URL}/auth/login`, {
       method: "POST",
       headers: {
@@ -13,10 +13,16 @@ export async function login({ email, password }) {
       credentials: "include", // Required to accept cookies from a different origin
     }).then((data) => data.json());
 
+    if (res.status !== 200) {
+      throw new Error({
+        status: res.status,
+        message: "User Login Successfully!",
+        data: res.data || {},
+      });
+    }
     return {
-      status: res.status,
-      message: "User Login Successfully!",
-      data: res.data || {},
+      status: 200,
+      message: res.message,
     };
   } catch (err) {
     return {
@@ -33,6 +39,7 @@ export async function logout() {
       headers: {
         "Content-Type": "application/json",
       },
+      credentials: "include", // Required to accept cookies from a different origin
     });
 
     return {
