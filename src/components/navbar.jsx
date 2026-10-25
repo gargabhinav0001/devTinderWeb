@@ -1,8 +1,15 @@
+import { useSelector } from "react-redux";
+import Logout from "./logout";
+
 export function NavBar() {
+  const user = useSelector((store) => store.user);
+  console.log(" user in navbar : ", user);
   return (
     <div className="navbar bg-base-300 shadow-sm">
       <div className="flex-1">
-        <a className="btn btn-ghost text-xl">daisyUI</a>
+        {user
+          ? `Welcome ${user?.firstName}`
+          : "Let me know you friend!, please login"}
       </div>
       <div className="flex gap-2">
         <div className="dropdown dropdown-end">
@@ -32,7 +39,7 @@ export function NavBar() {
               <a>Settings</a>
             </li>
             <li>
-              <a>Logout</a>
+              <Logout />
             </li>
           </ul>
         </div>
