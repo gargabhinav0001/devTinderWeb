@@ -1,52 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getFeed } from "../actions/feed";
 
-const profiles = [
-  {
-    id: 1,
-    name: "Sophia",
-    age: 24,
-    location: "New York, USA",
-    bio: "Coffee lover ☕ | Traveling the world 🌎",
-    image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800",
-    interests: ["Travel", "Coffee", "Music"],
-  },
-  {
-    id: 2,
-    name: "Emma",
-    age: 26,
-    location: "London, UK",
-    bio: "Adventure seeker. Always chasing sunsets 🌅",
-    image: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=800",
-    interests: ["Hiking", "Photography", "Art"],
-  },
-  {
-    id: 3,
-    name: "Olivia",
-    age: 23,
-    location: "Paris, France",
-    bio: "Foodie by nature, artist by heart 🎨",
-    image: "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?w=800",
-    interests: ["Food", "Art", "Movies"],
-  },
-  {
-    id: 4,
-    name: "Isabella",
-    age: 25,
-    location: "Toronto, Canada",
-    bio: "Making memories, one trip at a time ✈️",
-    image: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=800",
-    interests: ["Travel", "Fitness", "Books"],
-  },
-  {
-    id: 5,
-    name: "Mia",
-    age: 27,
-    location: "Sydney, Australia",
-    bio: "Beach days and good vibes only 🌊",
-    image: "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=800",
-    interests: ["Beach", "Music", "Fitness"],
-  },
-];
+const ANIMATION_DURATION = 500;
 
 export default function Feed() {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -54,9 +9,41 @@ export default function Feed() {
   const [isAnimating, setIsAnimating] = useState(false);
   const [accepted, setAccepted] = useState([]);
   const [rejected, setRejected] = useState([]);
+  const [profiles, setProfiles] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const getFeeds = async () => {
+      try {
+        setLoading(true);
+
+        const response = await getFeed({ page: 1, limit: 10 });
+
+        if (response.status === 200) {
+          setProfiles(response.data);
+        } else {
+          console.error("Failed to fetch feed:", response.message);
+        }
+      } catch (err) {
+        console.error("Error fetching feed:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    getFeeds();
+  }, []);
 
   const currentProfile = profiles[currentIndex];
-  const visibleProfiles = profiles.slice(currentIndex, currentIndex + 3);
+
+  // Keep the original index while reversing the cards.
+  const visibleProfiles = profiles
+    .slice(currentIndex, currentIndex + 3)
+    .map((profile, index) => ({
+      profile,
+      stackOffset: index,
+    }))
+    .reverse();
 
   const handleSwipe = (direction) => {
     if (isAnimating || !currentProfile) return;
@@ -64,17 +51,20 @@ export default function Feed() {
     setIsAnimating(true);
     setSwipeDirection(direction);
 
+    // MongoDB uses _id, so support both _id and id.
+    const profileId = currentProfile._id ?? currentProfile.id;
+
     if (direction === "right") {
-      setAccepted((prev) => [...prev, currentProfile.id]);
+      setAccepted((prev) => [...prev, profileId]);
     } else {
-      setRejected((prev) => [...prev, currentProfile.id]);
+      setRejected((prev) => [...prev, profileId]);
     }
 
     setTimeout(() => {
       setCurrentIndex((prev) => prev + 1);
       setSwipeDirection(null);
       setIsAnimating(false);
-    }, 400);
+    }, ANIMATION_DURATION);
   };
 
   const resetFeed = () => {
@@ -85,11 +75,31 @@ export default function Feed() {
     setRejected([]);
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-base-200">
+        <div className="text-lg font-semibold text-base-content/70">
+          Loading feed...
+        </div>
+      </div>
+    );
+  }
+
+  if (profiles.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-base-200">
+        <div className="text-lg font-semibold text-base-content/70">
+          No profiles available at the moment.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-base-200">
-      {/* Feed */}
       <main className="flex flex-col items-center px-4 py-8">
         <h1 className="text-2xl font-bold mb-2">Discover people</h1>
+
         <p className="text-base-content/60 mb-8">
           Swipe right to like, left to pass.
         </p>
@@ -98,63 +108,69 @@ export default function Feed() {
           <>
             {/* Stacked cards */}
             <div className="relative w-full max-w-sm h-[490px]">
-              {[...visibleProfiles].reverse().map((profile) => {
-                const offset = profile.id - currentProfile.id;
-                const isCurrent = offset === 0;
+              {visibleProfiles.map(({ profile, stackOffset }) => {
+                const isCurrent = stackOffset === 0;
 
                 let animationClass = "";
 
                 if (isCurrent && swipeDirection === "right") {
                   animationClass =
                     "translate-x-[150%] rotate-[25deg] opacity-0";
-                } else if (isCurrent && swipeDirection === "left") {
+                }
+
+                if (isCurrent && swipeDirection === "left") {
                   animationClass =
                     "-translate-x-[150%] -rotate-[25deg] opacity-0";
                 }
 
                 return (
                   <div
-                    key={profile.id}
-                    className={`card absolute inset-0 overflow-hidden bg-base-100 shadow-xl transition-all duration-400 ease-out ${
-                      isCurrent
-                        ? `z-30 ${animationClass}`
-                        : "pointer-events-none"
-                    }`}
+                    key={profile._id ?? profile.id}
+                    className={`
+                      card absolute inset-0 overflow-hidden
+                      bg-base-100 shadow-xl
+                      ${
+                        isCurrent
+                          ? `z-30 transition-all duration-500 ease-out will-change-transform ${animationClass}`
+                          : "pointer-events-none transition-all duration-300 ease-out"
+                      }
+                    `}
                     style={{
-                      zIndex: 30 - offset,
+                      zIndex: 30 - stackOffset,
                       transform: isCurrent
                         ? undefined
-                        : `translateY(${offset * 12}px) scale(${
-                            1 - offset * 0.045
-                          })`,
+                        : `translateY(${stackOffset * 12}px) scale(${1 - stackOffset * 0.045})`,
                       transformOrigin: "top center",
                     }}
                   >
-                    {/* Profile image */}
                     <figure className="relative h-full w-full">
                       <img
-                        src={profile.image}
-                        alt={profile.name}
+                        src={profile.photoUrl}
+                        alt={`${profile.firstName} ${profile.lastName}`}
                         className="h-full w-full object-cover"
                         draggable="false"
                       />
 
-                      {/* Image gradient */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/10" />
 
                       {/* Profile details */}
                       <div className="absolute bottom-0 left-0 w-full p-6 text-white">
                         <div className="flex items-end gap-2">
-                          <h2 className="text-4xl font-bold">{profile.name}</h2>
+                          <h2 className="text-4xl font-bold">
+                            {profile.firstName} {profile.lastName}
+                          </h2>
+
                           <span className="mb-1 text-2xl">{profile.age}</span>
                         </div>
 
-                        <p className="mt-2 text-sm">📍 {profile.location}</p>
+                        <p className="mt-2 text-sm">
+                          📍 {profile.location || "Location not specified"}
+                        </p>
 
-                        <p className="mt-3">{profile.bio}</p>
+                        <p className="mt-3">{profile.about}</p>
 
                         <div className="mt-4 flex flex-wrap gap-2">
-                          {profile.interests.map((interest) => (
+                          {(profile.skills ?? []).map((interest) => (
                             <span
                               key={interest}
                               className="badge badge-outline border-white/70 text-white"
@@ -165,7 +181,7 @@ export default function Feed() {
                         </div>
                       </div>
 
-                      {/* Swipe labels */}
+                      {/* LIKE / NOPE labels */}
                       {isCurrent && swipeDirection && (
                         <div
                           className={`absolute top-8 ${
@@ -209,11 +225,12 @@ export default function Feed() {
             </p>
           </>
         ) : (
-          /* Empty state */
           <div className="card mt-10 w-full max-w-sm bg-base-100 shadow-xl">
             <div className="card-body items-center py-12 text-center">
               <div className="text-6xl">💖</div>
+
               <h2 className="card-title mt-3">You're all caught up!</h2>
+
               <p className="text-base-content/60">
                 You've seen all the profiles.
               </p>
@@ -222,6 +239,7 @@ export default function Feed() {
                 <div className="badge badge-success badge-lg">
                   ♥ {accepted.length} liked
                 </div>
+
                 <div className="badge badge-error badge-lg">
                   ✕ {rejected.length} passed
                 </div>

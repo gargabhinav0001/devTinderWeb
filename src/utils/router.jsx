@@ -5,6 +5,7 @@ import Profile from "../components/profile";
 import Feed from "../components/feed";
 import ProfileSettings from "../components/ProfileSettings";
 import Home from "../components/Home";
+import Signup from "../components/Signup/SignUp";
 
 export function Routers() {
   return (
@@ -16,6 +17,7 @@ export function Routers() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/feed" element={<Feed />} />
           <Route path="/settings" element={<ProfileSettings />} />
+          <Route path="/register" element={<Signup />} />
         </Route>
       </Routes>
     </BrowserRouter>
